@@ -31,7 +31,7 @@ export function createApp() {
     const rawUrl =
       (req.headers['x-forwarded-url'] as string | undefined) ||
       (req.headers['x-matched-path'] as string | undefined);
-    if (rawUrl && (req.url === '/api' || req.url === '/api/')) {
+    if (rawUrl && (req.url === '/api' || req.url === '/api/' || req.url.startsWith('/api/index'))) {
       try {
         const parsed = new URL(rawUrl, 'http://localhost');
         req.url = parsed.pathname + parsed.search;
