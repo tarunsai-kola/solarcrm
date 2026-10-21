@@ -1,0 +1,169 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ─── Design Tokens ─────────────────────────────────────────────────────────── */
+@layer base {
+  :root {
+    /* Backgrounds */
+    --background: 222 47% 11%;
+    --foreground: 210 40% 98%;
+
+    /* Card */
+    --card: 222 47% 13%;
+    --card-foreground: 210 40% 98%;
+
+    /* Popover */
+    --popover: 222 47% 13%;
+    --popover-foreground: 210 40% 98%;
+
+    /* Brand — solar orange */
+    --primary: 34 94% 50%;
+    --primary-foreground: 222 47% 11%;
+
+    /* Secondary */
+    --secondary: 222 47% 18%;
+    --secondary-foreground: 210 40% 98%;
+
+    /* Muted */
+    --muted: 222 47% 16%;
+    --muted-foreground: 215 16% 60%;
+
+    /* Accent */
+    --accent: 34 94% 50%;
+    --accent-foreground: 222 47% 11%;
+
+    /* Destructive */
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 40% 98%;
+
+    /* Borders & Input */
+    --border: 222 47% 22%;
+    --input: 222 47% 18%;
+    --ring: 34 94% 50%;
+
+    /* Sidebar */
+    --sidebar: 222 47% 9%;
+    --sidebar-foreground: 210 40% 90%;
+    --sidebar-border: 222 47% 16%;
+    --sidebar-accent: 34 94% 50%;
+    --sidebar-accent-foreground: 222 47% 11%;
+
+    /* Radius */
+    --radius: 0.625rem;
+  }
+
+  /* Light mode override (opt-in via .light class) */
+  .light {
+    --background: 0 0% 100%;
+    --foreground: 222 84% 5%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 84% 5%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 84% 5%;
+    --primary: 34 94% 50%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 210 40% 96%;
+    --accent-foreground: 222 47% 11%;
+    --destructive: 0 72% 51%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 34 94% 50%;
+    --sidebar: 222 47% 11%;
+    --sidebar-foreground: 210 40% 98%;
+    --sidebar-border: 222 47% 22%;
+    --sidebar-accent: 34 94% 50%;
+    --sidebar-accent-foreground: 0 0% 100%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+    box-sizing: border-box;
+  }
+
+  html {
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+    min-height: 100dvh;
+  }
+
+  /* Focus visible outline */
+  :focus-visible {
+    @apply outline-none ring-2 ring-ring ring-offset-2 ring-offset-background;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/30 rounded-full;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/50;
+  }
+
+  /* Selection */
+  ::selection {
+    @apply bg-primary/20 text-foreground;
+  }
+}
+
+/* ─── Utility classes ────────────────────────────────────────────────────────── */
+@layer utilities {
+  /* Skeleton shimmer */
+  .skeleton {
+    @apply relative overflow-hidden rounded-md bg-muted;
+  }
+  .skeleton::after {
+    content: '';
+    @apply absolute inset-0;
+    background: linear-gradient(
+      90deg,
+      transparent 0%,
+      hsl(var(--muted-foreground) / 0.08) 50%,
+      transparent 100%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 2s linear infinite;
+  }
+
+  /* Glass card */
+  .glass {
+    @apply bg-card/60 backdrop-blur-xl border border-border/50;
+  }
+
+  /* Gradient text */
+  .gradient-text {
+    @apply bg-gradient-to-r from-solar-400 to-solar-600 bg-clip-text text-transparent;
+  }
+
+  /* Status badge variants */
+  .status-new        { @apply bg-blue-500/15 text-blue-400 border-blue-500/30; }
+  .status-contacted  { @apply bg-purple-500/15 text-purple-400 border-purple-500/30; }
+  .status-qualified  { @apply bg-cyan-500/15 text-cyan-400 border-cyan-500/30; }
+  .status-proposal   { @apply bg-orange-500/15 text-orange-400 border-orange-500/30; }
+  .status-negotiation { @apply bg-yellow-500/15 text-yellow-400 border-yellow-500/30; }
+  .status-won        { @apply bg-green-500/15 text-green-400 border-green-500/30; }
+  .status-lost       { @apply bg-red-500/15 text-red-400 border-red-500/30; }
+  .status-disqualified { @apply bg-gray-500/15 text-gray-400 border-gray-500/30; }
+}
