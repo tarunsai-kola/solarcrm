@@ -6,7 +6,7 @@
     "module": "NodeNext",
     "moduleResolution": "nodenext",
     "target": "ES2022",
-    "lib": ["ES2022"],
+    "lib": ["ES2022", "DOM"],
     "declaration": false,
     "declarationMap": false,
     "paths": {
