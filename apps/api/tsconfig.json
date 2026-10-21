@@ -13,6 +13,6 @@
       "@solar-crm/shared": ["../../packages/shared/src/index.ts"]
     }
   },
-  "include": ["src"],
+  "include": ["src", "api"],
   "exclude": ["dist", "node_modules"]
 }
