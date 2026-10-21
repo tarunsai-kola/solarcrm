@@ -26,6 +26,22 @@ import { usersRouter } from './routes/users.js';
 export function createApp() {
   const app = express();
 
+  // ── Restore original URL if rewritten by serverless host (e.g. Vercel) ───
+  app.use((req, _res, next) => {
+    const rawUrl =
+      (req.headers['x-forwarded-url'] as string | undefined) ||
+      (req.headers['x-matched-path'] as string | undefined);
+    if (rawUrl && (req.url === '/api' || req.url === '/api/')) {
+      try {
+        const parsed = new URL(rawUrl, 'http://localhost');
+        req.url = parsed.pathname + parsed.search;
+      } catch {
+        req.url = rawUrl;
+      }
+    }
+    next();
+  });
+
   // ── Request correlation ID ───────────────────────────────────────────────
   app.use((req, res, next) => {
     const incomingId = req.headers['x-request-id'];
@@ -40,9 +56,10 @@ export function createApp() {
 
   // ── Security middleware ─────────────────────────────────────────────────
   app.use(helmet());
+  const corsOrigin = env.CORS_ORIGIN === '*' ? true : env.CORS_ORIGIN;
   app.use(
     cors({
-      origin: env.CORS_ORIGIN,
+      origin: corsOrigin,
       credentials: true,
       methods: ['GET', 'POST', 'PATCH', 'PUT', 'DELETE', 'OPTIONS'],
       allowedHeaders: [
@@ -83,6 +100,18 @@ export function createApp() {
 
   // ── Idempotency protection for mutating requests ────────────────────────
   app.use(idempotencyMiddleware);
+
+  // ── Diagnostic Root Route ──────────────────────────────────────────────
+  app.get('/', (_req, res) => {
+    res.json({
+      status: 'ok',
+      service: 'Solar CRM API',
+      version: '1.0.0',
+      health: '/health',
+      api_base: env.API_BASE_PATH,
+      timestamp: new Date().toISOString(),
+    });
+  });
 
   // ── Health probes (Liveness & Readiness) ─────────────────────────────────
   app.get('/health', (_req, res) => {
