@@ -3,6 +3,14 @@
   "framework": "vite",
   "rewrites": [
     {
+      "source": "/api/:path*",
+      "destination": "https://solarcrm-tarunsaikolas-projects.vercel.app/api/:path*"
+    },
+    {
+      "source": "/health",
+      "destination": "https://solarcrm-tarunsaikolas-projects.vercel.app/health"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
