@@ -287,23 +287,30 @@ vi.mock('../src/lib/supabase.js', () => {
     return builder;
   };
 
+  const mockAdmin = {
+    from: mockFrom,
+    auth: {
+      getUser: vi.fn(async (token: string) => {
+        if (token === 'admin-token') {
+          return { data: { user: { id: USER_ADMIN_ID, email: 'admin@sunbeam.example' } }, error: null };
+        }
+        if (token === 'sales-token') {
+          return { data: { user: { id: USER_SALES_ID, email: 'rohit.sales@sunbeam.example' } }, error: null };
+        }
+        if (token === 'agent-token') {
+          return { data: { user: { id: USER_AGENT_ID, email: 'amit.agent@sunbeam.example' } }, error: null };
+        }
+        return { data: { user: null }, error: { message: 'Invalid token' } };
+      }),
+    },
+  };
+
   return {
-    supabaseAdmin: {
-      from: mockFrom,
-      auth: {
-        getUser: vi.fn(async (token: string) => {
-          if (token === 'admin-token') {
-            return { data: { user: { id: USER_ADMIN_ID, email: 'admin@sunbeam.example' } }, error: null };
-          }
-          if (token === 'sales-token') {
-            return { data: { user: { id: USER_SALES_ID, email: 'rohit.sales@sunbeam.example' } }, error: null };
-          }
-          if (token === 'agent-token') {
-            return { data: { user: { id: USER_AGENT_ID, email: 'amit.agent@sunbeam.example' } }, error: null };
-          }
-          return { data: { user: null }, error: { message: 'Invalid token' } };
-        }),
-      },
+    supabaseAdmin: mockAdmin,
+    getScopedClient: vi.fn(() => mockAdmin),
+    authStorage: {
+      getStore: vi.fn(() => ({ client: mockAdmin, token: 'mock-token' })),
+      run: vi.fn((_store: unknown, fn: () => unknown) => fn()),
     },
   };
 });

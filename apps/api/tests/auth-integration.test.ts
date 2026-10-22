@@ -113,6 +113,21 @@ vi.mock('../src/lib/supabase.js', () => {
           },
         }),
       }),
+      upsert: (record: any) => ({
+        select: () => ({
+          single: () => {
+            return Promise.resolve({
+              data: {
+                ...record,
+                id: record.id ?? `usr-new-${Date.now()}`,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString(),
+              },
+              error: null,
+            });
+          },
+        }),
+      }),
       update: (values: Record<string, unknown>) => {
         currentUpdateValues = values;
         return queryBuilder;
@@ -125,64 +140,71 @@ vi.mock('../src/lib/supabase.js', () => {
     return queryBuilder;
   };
 
-  return {
-    supabaseAdmin: {
-      from: mockFrom,
-      auth: {
-        getUser: vi.fn(async (token: string) => {
-          if (token === 'admin-jwt') {
-            return { data: { user: { id: mockUsers.admin.id, email: mockUsers.admin.email } }, error: null };
-          }
-          if (token === 'sales-jwt') {
-            return { data: { user: { id: mockUsers.sales.id, email: mockUsers.sales.email } }, error: null };
-          }
-          if (token === 'agent-jwt') {
-            return { data: { user: { id: mockUsers.agent.id, email: mockUsers.agent.email } }, error: null };
-          }
-          if (token === 'suspended-jwt') {
-            return { data: { user: { id: mockUsers.suspended.id, email: mockUsers.suspended.email } }, error: null };
-          }
-          return { data: { user: null }, error: { message: 'Invalid token' } };
-        }),
-        admin: {
-          createUser: vi.fn(async (params: { email: string; user_metadata: unknown }) => {
-            return {
-              data: {
-                user: {
-                  id: `new-user-${Math.random().toString(36).slice(2, 8)}`,
-                  email: params.email,
-                  user_metadata: params.user_metadata,
-                },
-              },
-              error: null,
-            };
-          }),
-          deleteUser: vi.fn().mockResolvedValue({ error: null }),
-          generateLink: vi.fn(async ({ email }: { email: string }) => {
-            return {
-              data: {
-                properties: {
-                  action_link: `https://solarcrm.supabase.co/auth/v1/verify?type=recovery&email=${encodeURIComponent(email)}&token=mock-sec-tok`,
-                },
-              },
-              error: null,
-            };
-          }),
-          updateUserById: vi.fn(async (userId: string, attributes: { ban_duration?: string }) => {
-            if (attributes.ban_duration) {
-              bannedUsers[userId] = attributes.ban_duration;
-            }
-            return { data: { user: { id: userId } }, error: null };
-          }),
-        },
-      },
-      rpc: vi.fn(async (fnName: string, args: unknown) => {
-        if (fnName === 'log_audit_event') {
-          auditLogs.push(args);
-          return { data: 'audit-id-123', error: null };
+  const mockAdmin = {
+    from: mockFrom,
+    auth: {
+      getUser: vi.fn(async (token: string) => {
+        if (token === 'admin-jwt') {
+          return { data: { user: { id: mockUsers.admin.id, email: mockUsers.admin.email } }, error: null };
         }
-        return { data: null, error: null };
+        if (token === 'sales-jwt') {
+          return { data: { user: { id: mockUsers.sales.id, email: mockUsers.sales.email } }, error: null };
+        }
+        if (token === 'agent-jwt') {
+          return { data: { user: { id: mockUsers.agent.id, email: mockUsers.agent.email } }, error: null };
+        }
+        if (token === 'suspended-jwt') {
+          return { data: { user: { id: mockUsers.suspended.id, email: mockUsers.suspended.email } }, error: null };
+        }
+        return { data: { user: null }, error: { message: 'Invalid token' } };
       }),
+      admin: {
+        createUser: vi.fn(async (params: { email: string; user_metadata: unknown }) => {
+          return {
+            data: {
+              user: {
+                id: `new-user-${Math.random().toString(36).slice(2, 8)}`,
+                email: params.email,
+                user_metadata: params.user_metadata,
+              },
+            },
+            error: null,
+          };
+        }),
+        deleteUser: vi.fn().mockResolvedValue({ error: null }),
+        generateLink: vi.fn(async ({ email }: { email: string }) => {
+          return {
+            data: {
+              properties: {
+                action_link: `https://solarcrm.supabase.co/auth/v1/verify?type=recovery&email=${encodeURIComponent(email)}&token=mock-sec-tok`,
+              },
+            },
+            error: null,
+          };
+        }),
+        updateUserById: vi.fn(async (userId: string, attributes: { ban_duration?: string }) => {
+          if (attributes.ban_duration) {
+            bannedUsers[userId] = attributes.ban_duration;
+          }
+          return { data: { user: { id: userId } }, error: null };
+        }),
+      },
+    },
+    rpc: vi.fn(async (fnName: string, args: unknown) => {
+      if (fnName === 'log_audit_event') {
+        auditLogs.push(args);
+        return { data: 'audit-id-123', error: null };
+      }
+      return { data: null, error: null };
+    }),
+  };
+
+  return {
+    supabaseAdmin: mockAdmin,
+    getScopedClient: vi.fn(() => mockAdmin),
+    authStorage: {
+      getStore: vi.fn(() => ({ client: mockAdmin, token: 'mock-token' })),
+      run: vi.fn((_store: unknown, fn: () => unknown) => fn()),
     },
   };
 });

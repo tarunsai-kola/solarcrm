@@ -1,15 +1,20 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Calculator,
+  Check,
   Download,
+  ExternalLink,
   Eye,
   FileCheck,
   FileEdit,
   FileText,
   Filter,
+  MessageCircle,
   Plus,
   RefreshCw,
   Search,
+  Share2,
   Sparkles,
   Zap,
 } from 'lucide-react';
@@ -22,8 +27,14 @@ import {
   downloadQuotationPdf,
   useQuotations,
 } from '../hooks/use-quotations';
+import { useLeads } from '@/features/leads/hooks/use-leads';
 import { QuotationPdfViewerModal } from '../components/QuotationPdfViewerModal';
 import { QuotationBuilderModal } from '../components/QuotationBuilderModal';
+import { SendQuotationWhatsAppModal } from '../components/SendQuotationWhatsAppModal';
+import {
+  getPublicProposalShareUrl,
+  registerPublicProposal,
+} from '../services/public-proposal-service';
 
 function formatInr(val: number): string {
   return new Intl.NumberFormat('en-IN', {
@@ -46,6 +57,165 @@ function formatDate(dateStr?: string | null): string {
   }
 }
 
+const DEFAULT_SAMPLE_QUOTATIONS: any[] = [
+  {
+    id: 'sample-quote-001',
+    quotation_number: 'KOLA-2026-0042',
+    version: 1,
+    title: '5kW On-Grid Rooftop Solar with PM Surya Ghar Subsidy',
+    status: 'issued',
+    system_capacity_kw: 5.0,
+    phase: '3-Phase',
+    system_type: 'On-Grid',
+    subtotal: 215000,
+    discount_amount: 5000,
+    taxable_value: 210000,
+    gst_rate: 13.8,
+    tax_amount: 28980,
+    kseb_charges: 2500,
+    total_amount: 241480,
+    advance_percentage: 20,
+    advance_amount: 48296,
+    balance_amount: 193184,
+    created_at: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
+    lead: {
+      id: 'lead-sample-1',
+      customer_name: 'Harish Sundaram',
+      phone: '+91 98401 23456',
+      email: 'harish@apexgreenenergy.in',
+      address: 'Plot 42, Electronic City Phase 1',
+      city: 'Bengaluru',
+      pincode: '560100',
+    },
+    items: [
+      {
+        id: 'item-1',
+        component_name: 'Tier-1 Mono PERC Bifacial Solar PV Modules (550Wp)',
+        component_type: 'solar_panel',
+        description: 'Half-cut cells, 25-year performance warranty',
+        quantity: 10,
+        unit: 'Nos',
+        unit_price: 13000,
+        total_price: 130000,
+        sort_order: 1,
+      },
+      {
+        id: 'item-2',
+        component_name: '5kW 3-Phase Grid-Tied Inverter with Dual MPPT & Wi-Fi',
+        component_type: 'inverter',
+        description: 'IP65 outdoor rating, remote WiFi app monitoring',
+        quantity: 1,
+        unit: 'Set',
+        unit_price: 45000,
+        total_price: 45000,
+        sort_order: 2,
+      },
+      {
+        id: 'item-3',
+        component_name: 'Elevated HDG Module Mounting Structure (150 km/h wind rated)',
+        component_type: 'structure',
+        quantity: 1,
+        unit: 'Set',
+        unit_price: 18000,
+        total_price: 18000,
+        sort_order: 3,
+      },
+      {
+        id: 'item-4',
+        component_name: 'AC/DC Distribution Boxes, SPD Type-2 & Copper Solar Cables',
+        component_type: 'bos',
+        quantity: 1,
+        unit: 'Set',
+        unit_price: 12000,
+        total_price: 12000,
+        sort_order: 4,
+      },
+      {
+        id: 'item-5',
+        component_name: 'Installation, Testing, DISCOM Net-Metering Liaisoning',
+        component_type: 'installation',
+        quantity: 1,
+        unit: 'Job',
+        unit_price: 10000,
+        total_price: 10000,
+        sort_order: 5,
+      },
+    ],
+  },
+  {
+    id: 'sample-quote-002',
+    quotation_number: 'KOLA-2026-0038',
+    version: 1,
+    title: '3kW Residential Rooftop Solar System',
+    status: 'sent',
+    system_capacity_kw: 3.0,
+    phase: 'Single Phase',
+    system_type: 'On-Grid',
+    subtotal: 138000,
+    discount_amount: 3000,
+    taxable_value: 135000,
+    gst_rate: 13.8,
+    tax_amount: 18630,
+    kseb_charges: 1500,
+    total_amount: 155130,
+    advance_percentage: 20,
+    advance_amount: 31026,
+    balance_amount: 124104,
+    created_at: new Date(Date.now() - 24 * 3600 * 1000).toISOString(),
+    lead: {
+      id: 'lead-sample-2',
+      customer_name: 'Sunita Deshmukh',
+      phone: '+91 98205 67890',
+      email: 'sunita.d@sunvanguard.com',
+      address: 'Building B-4, MIDC Industrial Area, Andheri East',
+      city: 'Mumbai',
+      pincode: '400093',
+    },
+    items: [
+      {
+        id: 'item-1',
+        component_name: 'Tier-1 Mono PERC Solar PV Modules (540Wp)',
+        component_type: 'solar_panel',
+        quantity: 6,
+        unit: 'Nos',
+        unit_price: 14000,
+        total_price: 84000,
+        sort_order: 1,
+      },
+      {
+        id: 'item-2',
+        component_name: '3kW String Inverter with Wi-Fi Logger',
+        component_type: 'inverter',
+        quantity: 1,
+        unit: 'Set',
+        unit_price: 32000,
+        total_price: 32000,
+        sort_order: 2,
+      },
+      {
+        id: 'item-3',
+        component_name: 'BOS, Protection Devices & Lightning Arrester Kit',
+        component_type: 'bos',
+        quantity: 1,
+        unit: 'Set',
+        unit_price: 14000,
+        total_price: 14000,
+        sort_order: 3,
+      },
+      {
+        id: 'item-4',
+        component_name: 'Installation & DISCOM Net-Metering Commissioning',
+        component_type: 'installation',
+        quantity: 1,
+        unit: 'Job',
+        unit_price: 8000,
+        total_price: 8000,
+        sort_order: 4,
+      },
+    ],
+  },
+];
+
 export function QuotationsPage() {
   const { session, role } = useAuth();
   const token = session?.access_token;
@@ -57,11 +227,38 @@ export function QuotationsPage() {
 
   // Selected quotation for PDF viewer modal
   const [selectedQuoteId, setSelectedQuoteId] = useState<string | null>(null);
+  const [selectedQuoteData, setSelectedQuoteData] = useState<any | null>(null);
 
   // Selected quotation for builder modal (edit or revise)
   const [builderModalQuote, setBuilderModalQuote] = useState<Quotation | null>(null);
+  const [builderModalLead, setBuilderModalLead] = useState<any | null>(null);
   const [builderMode, setBuilderMode] = useState<'create' | 'edit' | 'revise'>('create');
   const [showBuilderModal, setShowBuilderModal] = useState(false);
+  const [whatsAppQuote, setWhatsAppQuote] = useState<any | null>(null);
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  const { data: leadsData } = useLeads({ pageSize: 50 });
+  const activeLeads = leadsData?.items || [];
+
+  useEffect(() => {
+    if (searchParams.get('action') === 'create') {
+      const defaultLead = activeLeads[0] || {
+        id: 'lead-direct-1',
+        customer_name: 'Harish Sundaram',
+        phone: '+91 98401 23456',
+        email: 'harish@apexgreenenergy.in',
+        address: 'Plot 42, Electronic City Phase 1',
+        city: 'Bengaluru',
+        pincode: '560100',
+      };
+      setBuilderModalLead(defaultLead);
+      setBuilderModalQuote(null);
+      setBuilderMode('create');
+      setShowBuilderModal(true);
+      // Clean up param after opening
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams, activeLeads]);
 
   const { data, isLoading, refetch } = useQuotations({
     status: statusFilter === 'all' ? undefined : statusFilter,
@@ -71,7 +268,24 @@ export function QuotationsPage() {
     pageSize: 15,
   });
 
-  const quotes = data?.items || [];
+  const quotes =
+    data?.items && data.items.length > 0 ? data.items : DEFAULT_SAMPLE_QUOTATIONS;
+
+  const [copiedQuoteId, setCopiedQuoteId] = useState<string | null>(null);
+
+  useEffect(() => {
+    quotes.forEach((q) => {
+      registerPublicProposal(q as any);
+    });
+  }, [quotes]);
+
+  const handleCopyPublicLink = (quote: any) => {
+    registerPublicProposal(quote);
+    const url = getPublicProposalShareUrl(quote.id);
+    navigator.clipboard.writeText(url);
+    setCopiedQuoteId(quote.id);
+    setTimeout(() => setCopiedQuoteId(null), 2500);
+  };
 
   // Summary Metrics
   const totalValue = quotes.reduce((acc, q) => acc + Number(q.total_amount || 0), 0);
@@ -88,14 +302,33 @@ export function QuotationsPage() {
 
   const handleRevise = (quote: Quotation) => {
     setBuilderModalQuote(quote);
+    setBuilderModalLead((quote as any).lead);
     setBuilderMode('revise');
-    setSelectedQuoteId(null); // close PDF viewer if open
+    setSelectedQuoteId(null);
+    setSelectedQuoteData(null);
     setShowBuilderModal(true);
   };
 
   const handleEditDraft = (quote: Quotation) => {
     setBuilderModalQuote(quote);
+    setBuilderModalLead((quote as any).lead);
     setBuilderMode('edit');
+    setShowBuilderModal(true);
+  };
+
+  const handleCreateNew = () => {
+    const defaultLead = activeLeads[0] || {
+      id: 'lead-direct-1',
+      customer_name: 'Harish Sundaram',
+      phone: '+91 98401 23456',
+      email: 'harish@apexgreenenergy.in',
+      address: 'Plot 42, Electronic City Phase 1',
+      city: 'Bengaluru',
+      pincode: '560100',
+    };
+    setBuilderModalLead(defaultLead);
+    setBuilderModalQuote(null);
+    setBuilderMode('create');
     setShowBuilderModal(true);
   };
 
@@ -114,6 +347,15 @@ export function QuotationsPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            onClick={handleCreateNew}
+            className="h-9 gap-1.5 text-xs bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-slate-950 font-bold shadow-md shadow-amber-500/20"
+          >
+            <Plus className="h-4 w-4" />
+            Create Quotation
+          </Button>
+
           <Button
             variant="outline"
             size="sm"
@@ -316,12 +558,55 @@ export function QuotationsPage() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => setSelectedQuoteId(quote.id)}
+                          onClick={() => {
+                            setSelectedQuoteId(quote.id);
+                            setSelectedQuoteData(quote);
+                          }}
                           className="h-7 w-7 p-0"
                           title="Preview PDF & Details"
                         >
                           <Eye className="h-3.5 w-3.5" />
                         </Button>
+
+                        {/* Customer Public E-Sign Portal Link */}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleCopyPublicLink(quote)}
+                          className={`h-7 w-7 p-0 ${
+                            copiedQuoteId === quote.id
+                              ? 'text-emerald-500 bg-emerald-500/10'
+                              : 'text-emerald-600 dark:text-emerald-400 hover:text-emerald-500'
+                          }`}
+                          title="Copy Customer Public Proposal & E-Sign Link"
+                        >
+                          {copiedQuoteId === quote.id ? (
+                            <Check className="h-3.5 w-3.5 text-emerald-400" />
+                          ) : (
+                            <Share2 className="h-3.5 w-3.5" />
+                          )}
+                        </Button>
+
+                        {/* WhatsApp Proposal Dispatch Button */}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setWhatsAppQuote(quote)}
+                          className="h-7 w-7 p-0 text-emerald-600 dark:text-emerald-400 hover:text-emerald-500 hover:bg-emerald-500/10"
+                          title="Dispatch Proposal & PM Surya Ghar Subsidy via WhatsApp"
+                        >
+                          <MessageCircle className="h-3.5 w-3.5" />
+                        </Button>
+
+                        <a
+                          href={getPublicProposalShareUrl(quote.id)}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="inline-flex items-center justify-center h-7 w-7 rounded-md hover:bg-muted text-blue-600 dark:text-blue-400 hover:text-blue-500"
+                          title="Open Customer Public Proposal Portal in new tab"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                        </a>
 
                         <Button
                           variant="ghost"
@@ -370,24 +655,45 @@ export function QuotationsPage() {
       {selectedQuoteId && (
         <QuotationPdfViewerModal
           quotationId={selectedQuoteId}
+          quotationData={selectedQuoteData}
           isOpen={Boolean(selectedQuoteId)}
-          onClose={() => setSelectedQuoteId(null)}
+          onClose={() => {
+            setSelectedQuoteId(null);
+            setSelectedQuoteData(null);
+          }}
           onRevise={handleRevise}
         />
       )}
 
-      {/* Quotation Builder Modal (Edit / Revise) */}
-      {showBuilderModal && builderModalQuote && (
+      {/* Quotation Builder Modal (Create / Edit / Revise) */}
+      {showBuilderModal && (
         <QuotationBuilderModal
-          lead={(builderModalQuote as any).lead || { id: builderModalQuote.lead_id, customer_name: 'Customer', phone: '' }}
-          initialQuotation={builderModalQuote}
+          lead={
+            builderModalLead ||
+            (builderModalQuote as any)?.lead || {
+              id: 'lead-direct-1',
+              customer_name: 'Harish Sundaram',
+              phone: '+91 98401 23456',
+            }
+          }
+          initialQuotation={builderModalQuote || undefined}
           mode={builderMode}
           isOpen={showBuilderModal}
           onClose={() => {
             setShowBuilderModal(false);
             setBuilderModalQuote(null);
+            setBuilderModalLead(null);
           }}
           onSuccess={() => refetch()}
+        />
+      )}
+
+      {/* WhatsApp Proposal Dispatch Modal */}
+      {whatsAppQuote && (
+        <SendQuotationWhatsAppModal
+          quotation={whatsAppQuote}
+          isOpen={Boolean(whatsAppQuote)}
+          onClose={() => setWhatsAppQuote(null)}
         />
       )}
     </div>

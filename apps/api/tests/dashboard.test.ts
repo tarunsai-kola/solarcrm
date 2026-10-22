@@ -381,26 +381,33 @@ vi.mock('../src/lib/supabase.js', () => {
     return builder;
   };
 
+  const mockAdmin = {
+    from: mockFrom,
+    auth: {
+      getUser: vi.fn(async (token: string) => {
+        if (token === 'admin-token') {
+          return { data: { user: { id: 'usr-admin-1', email: 'admin@sunbeam.example' } }, error: null };
+        }
+        if (token === 'sales-token') {
+          return { data: { user: { id: 'usr-sales-1', email: 'rohit.sales@sunbeam.example' } }, error: null };
+        }
+        if (token === 'agent1-token') {
+          return { data: { user: { id: 'usr-agent-1', email: 'amit.agent@sunbeam.example' } }, error: null };
+        }
+        if (token === 'agent2-token') {
+          return { data: { user: { id: 'usr-agent-2', email: 'suresh.agent@sunbeam.example' } }, error: null };
+        }
+        return { data: { user: null }, error: { message: 'Invalid token' } };
+      }),
+    },
+  };
+
   return {
-    supabaseAdmin: {
-      from: mockFrom,
-      auth: {
-        getUser: vi.fn(async (token: string) => {
-          if (token === 'admin-token') {
-            return { data: { user: { id: 'usr-admin-1', email: 'admin@sunbeam.example' } }, error: null };
-          }
-          if (token === 'sales-token') {
-            return { data: { user: { id: 'usr-sales-1', email: 'rohit.sales@sunbeam.example' } }, error: null };
-          }
-          if (token === 'agent1-token') {
-            return { data: { user: { id: 'usr-agent-1', email: 'amit.agent@sunbeam.example' } }, error: null };
-          }
-          if (token === 'agent2-token') {
-            return { data: { user: { id: 'usr-agent-2', email: 'suresh.agent@sunbeam.example' } }, error: null };
-          }
-          return { data: { user: null }, error: { message: 'Invalid token' } };
-        }),
-      },
+    supabaseAdmin: mockAdmin,
+    getScopedClient: vi.fn(() => mockAdmin),
+    authStorage: {
+      getStore: vi.fn(() => ({ client: mockAdmin, token: 'mock-token' })),
+      run: vi.fn((_store: unknown, fn: () => unknown) => fn()),
     },
   };
 });

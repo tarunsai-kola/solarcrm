@@ -5,14 +5,17 @@ import {
   CheckCircle2,
   Copy,
   Download,
+  ExternalLink,
   FileCheck,
   FileEdit,
   FileText,
   Mail,
   MapPin,
+  MessageCircle,
   Phone,
   Printer,
   Send,
+  Share2,
   ShieldCheck,
   Sun,
   X,
@@ -30,9 +33,19 @@ import {
   useQuotation,
   useUpdateQuotationStatus,
 } from '../hooks/use-quotations';
+import {
+  calculateSubsidyAndFinancing,
+  formatCurrencyInr,
+} from '../utils/solar-subsidy-calc';
+import {
+  getPublicProposalShareUrl,
+  registerPublicProposal,
+} from '../services/public-proposal-service';
+import { SendQuotationWhatsAppModal } from './SendQuotationWhatsAppModal';
 
 interface QuotationPdfViewerModalProps {
   quotationId: string;
+  quotationData?: any;
   isOpen: boolean;
   onClose: () => void;
   onRevise?: (quotation: Quotation) => void;
@@ -62,6 +75,7 @@ function formatDate(dateStr?: string | null): string {
 
 export function QuotationPdfViewerModal({
   quotationId,
+  quotationData,
   isOpen,
   onClose,
   onRevise,
@@ -69,14 +83,26 @@ export function QuotationPdfViewerModal({
   const { session, role } = useAuth();
   const token = session?.access_token;
 
-  const { data: quote, isLoading } = useQuotation(quotationId);
+  const { data: fetchedQuote, isLoading } = useQuotation(quotationData ? undefined : quotationId);
+  const quote = quotationData || fetchedQuote;
   const { data: activeSettings } = useCompanySettings();
   const { data: activeOffices } = useCompanyOffices();
   const { data: bankAccounts } = useCompanyBankAccounts();
   const updateStatusMutation = useUpdateQuotationStatus(quotationId);
 
   const [copiedBank, setCopiedBank] = useState(false);
+  const [copiedShareLink, setCopiedShareLink] = useState(false);
+  const [showWhatsAppModal, setShowWhatsAppModal] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+
+  const handleSharePublicLink = () => {
+    if (!quote) return;
+    registerPublicProposal(quote);
+    const url = getPublicProposalShareUrl(quote.id);
+    navigator.clipboard.writeText(url);
+    setCopiedShareLink(true);
+    setTimeout(() => setCopiedShareLink(false), 2500);
+  };
 
   if (!isOpen) return null;
 
@@ -92,6 +118,16 @@ export function QuotationPdfViewerModal({
   ).slice(0, 6);
 
   const bank = snapshot.bank_account || bankAccounts?.find((b) => b.is_primary) || bankAccounts?.[0] || null;
+
+  const subsidyResult = quote
+    ? calculateSubsidyAndFinancing(quote.total_amount, quote.system_capacity_kw || 5, {
+        enableSubsidy: true,
+        isResidential: true,
+        enableLoan: true,
+        loanTenorYears: 5,
+        loanInterestRatePercent: 7.0,
+      })
+    : null;
 
   const handleDownload = async () => {
     if (!quote) return;
@@ -202,6 +238,44 @@ export function QuotationPdfViewerModal({
                 Revise (v{(quote.version || 1) + 1})
               </Button>
             )}
+
+            {/* Share Customer Public E-Sign Portal Link */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleSharePublicLink}
+              className={`h-8 gap-1.5 text-xs ${
+                copiedShareLink
+                  ? 'text-emerald-500 border-emerald-500/50 bg-emerald-500/10'
+                  : 'text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10'
+              }`}
+              title="Copy public link for customer to review and digitally sign"
+            >
+              {copiedShareLink ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Share2 className="h-3.5 w-3.5" />}
+              {copiedShareLink ? 'Link Copied!' : 'Customer E-Sign Link'}
+            </Button>
+
+            {/* WhatsApp Proposal Dispatch Button */}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowWhatsAppModal(true)}
+              className="h-8 gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/10"
+              title="Dispatch Proposal & PM Surya Ghar Subsidy via WhatsApp"
+            >
+              <MessageCircle className="h-3.5 w-3.5" />
+              WhatsApp
+            </Button>
+
+            <a
+              href={quote ? getPublicProposalShareUrl(quote.id) : '#'}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center justify-center h-8 px-2 rounded-md border border-border text-xs text-muted-foreground hover:text-foreground hover:bg-muted"
+              title="Preview Customer Public Portal in new tab"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+            </a>
 
             <Button
               variant="outline"
@@ -442,6 +516,57 @@ export function QuotationPdfViewerModal({
                 </div>
               </div>
 
+              {/* Government Subsidy & Clean Energy Financing Feasibility Card */}
+              {subsidyResult && (
+                <div className="border border-amber-300 bg-amber-50/50 rounded-lg p-3.5 space-y-2.5">
+                  <div className="flex items-center justify-between border-b border-amber-200 pb-1.5">
+                    <div className="flex items-center gap-1.5 font-bold text-[10px] text-amber-950 uppercase tracking-wider">
+                      <span>🏛️ PM Surya Ghar (Muft Bijli Yojana) Subsidy & Green Loan Feasibility</span>
+                    </div>
+                    <span className="text-[10px] font-bold text-emerald-800 bg-emerald-100 px-2 py-0.5 rounded border border-emerald-300">
+                      Eligible Central MNRE Subsidy
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-3 gap-3 text-xs">
+                    <div className="bg-white/80 p-2 rounded border border-amber-200 space-y-0.5">
+                      <span className="text-[10px] text-gray-500 block">PM Surya Ghar Subsidy:</span>
+                      <span className="font-mono font-bold text-emerald-700 text-sm">
+                        - {formatCurrencyInr(subsidyResult.totalSubsidy)}
+                      </span>
+                      <p className="text-[9px] text-gray-500">Government direct benefit transfer</p>
+                    </div>
+
+                    <div className="bg-white/80 p-2 rounded border border-amber-200 space-y-0.5">
+                      <span className="text-[10px] text-gray-500 block">Effective Net Investment:</span>
+                      <span className="font-mono font-bold text-gray-900 text-sm">
+                        {formatCurrencyInr(subsidyResult.netCustomerPayable)}
+                      </span>
+                      <p className="text-[9px] text-gray-500">Customer out-of-pocket cost</p>
+                    </div>
+
+                    <div className="bg-white/80 p-2 rounded border border-emerald-300 space-y-0.5 bg-emerald-50/50">
+                      <span className="text-[10px] text-emerald-800 font-semibold block">5-Yr Green Loan EMI:</span>
+                      <span className="font-mono font-bold text-emerald-800 text-sm">
+                        {formatCurrencyInr(subsidyResult.monthlyEmi)} / mo
+                      </span>
+                      <p className="text-[9px] text-emerald-700">
+                        Monthly bill savings: <strong>+{formatCurrencyInr(subsidyResult.monthlyElectricitySavings)}/mo</strong>
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-between pt-1 border-t border-amber-200/80 text-[10px] text-gray-700">
+                    <span>
+                      ⚡ Est. Generation: <strong>~{subsidyResult.monthlyUnitsGenerated} units/month</strong> • Payback: <strong>{subsidyResult.simplePaybackYears} Years</strong>
+                    </span>
+                    <span className="font-semibold text-emerald-800">
+                      25-Year Cumulative Savings: {formatCurrencyInr(subsidyResult.lifetime25YrSavings)}
+                    </span>
+                  </div>
+                </div>
+              )}
+
               {/* Bank Details Card (Authorized Quotation Context) */}
               {bank && (
                 <div className="border border-emerald-300 bg-emerald-50/60 rounded-lg p-3 flex items-center justify-between">
@@ -513,6 +638,15 @@ export function QuotationPdfViewerModal({
           )}
         </div>
       </div>
+
+      {/* WhatsApp Proposal Dispatch Modal */}
+      {showWhatsAppModal && quote && (
+        <SendQuotationWhatsAppModal
+          quotation={quote}
+          isOpen={showWhatsAppModal}
+          onClose={() => setShowWhatsAppModal(false)}
+        />
+      )}
     </div>
   );
 }

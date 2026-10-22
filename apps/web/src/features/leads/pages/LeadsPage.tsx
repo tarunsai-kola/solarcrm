@@ -9,6 +9,7 @@ import {
   Download,
   Filter,
   Flame,
+  Globe,
   History,
   Loader2,
   MapPin,
@@ -23,6 +24,7 @@ import {
   X,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
 
 import {
   ENQUIRY_TYPES,
@@ -296,6 +298,18 @@ export function LeadsPage() {
         </div>
 
         <div className="flex items-center gap-2.5 shrink-0">
+          {/* Landing Inquiries Hub Button */}
+          <Link to="/admin/landing-inquiries">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5 text-xs h-9 border-amber-500/40 text-amber-400 bg-amber-500/10 hover:bg-amber-500/20"
+            >
+              <Globe className="h-3.5 w-3.5" />
+              Landing Inquiries
+            </Button>
+          </Link>
+
           {/* Export CSV Button (Restricted) */}
           {canExport && (
             <Button

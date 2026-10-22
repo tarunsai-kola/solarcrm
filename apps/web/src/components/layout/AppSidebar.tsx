@@ -3,17 +3,25 @@ import {
   Bell,
   BookOpen,
   Building2,
+  Calculator,
   Calendar,
   ChevronLeft,
   ChevronRight,
+  ClipboardCheck,
   ClipboardList,
+  FileCheck2,
   FileText,
+  Gift,
+  Globe,
+  HardHat,
+  Inbox,
   LayoutDashboard,
   Plug,
   Settings,
   Sun,
   Users,
   UserSquare2,
+  Wrench,
 } from 'lucide-react';
 import { NavLink, useLocation } from 'react-router-dom';
 
@@ -27,9 +35,15 @@ const NAV_ITEMS = [
   { key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, to: '/dashboard' },
   { key: 'leads', label: 'Manage Leads', icon: ClipboardList, to: '/leads' },
   { key: 'follow-ups', label: 'Follow-ups', icon: Bell, to: '/follow-ups' },
+  { key: 'site-visits', label: 'Site Visits & Audits', icon: ClipboardCheck, to: '/site-visits' },
   { key: 'calendar', label: 'Calendar', icon: Calendar, to: '/calendar' },
   { key: 'quotations', label: 'Quotations', icon: FileText, to: '/quotations' },
+  { key: 'projects', label: 'EPC Projects', icon: HardHat, to: '/projects' },
+  { key: 'service-tickets', label: 'AMC & Services', icon: Wrench, to: '/service-tickets' },
+  { key: 'calculator', label: 'Solar Sizer', icon: Calculator, to: '/calculator' },
   { key: 'customers', label: 'Customers', icon: UserSquare2, to: '/customers' },
+  { key: 'referrals', label: 'Customer Referrals', icon: Gift, to: '/referrals' },
+  { key: 'compliance-vault', label: 'Compliance & Subsidy', icon: FileCheck2, to: '/compliance-vault' },
   { key: 'reports', label: 'Reports & Analytics', icon: BarChart3, to: '/reports' },
   { key: 'notifications', label: 'Notifications', icon: Bell, to: '/notifications' },
 ] as const;
@@ -95,12 +109,25 @@ export function AppSidebar({ collapsed, mobileOpen, onMobileClose }: SidebarProp
             {visibleAdmin.map((item) => (
               <NavItem key={item.key} item={item} collapsed={collapsed} />
             ))}
+            <NavItem
+              item={{
+                key: 'landing-inquiries',
+                label: 'Landing Inquiries',
+                icon: Inbox,
+                to: '/admin/landing-inquiries',
+              }}
+              collapsed={collapsed}
+            />
           </>
         )}
       </nav>
 
-      {/* ── Settings link ── */}
-      <div className="border-t border-sidebar-border p-2">
+      {/* ── Settings & Public Landing Link ── */}
+      <div className="border-t border-sidebar-border p-2 space-y-1">
+        <NavItem
+          item={{ key: 'landing-promo', label: 'Kola Landing Page', icon: Globe, to: '/' }}
+          collapsed={collapsed}
+        />
         <NavItem
           item={{ key: 'company-settings', label: 'Settings', icon: Settings, to: '/company-settings' }}
           collapsed={collapsed}

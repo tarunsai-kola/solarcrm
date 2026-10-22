@@ -26,6 +26,12 @@ import {
   useUpdateQuotation,
   useUpdateQuotationStatus,
 } from '../hooks/use-quotations';
+import {
+  type SubsidyFinancingConfig,
+  DEFAULT_SUBSIDY_FINANCING_CONFIG,
+  calculateSubsidyAndFinancing,
+} from '../utils/solar-subsidy-calc';
+import { SubsidyFinancingCard } from './SubsidyFinancingCard';
 
 interface QuotationBuilderModalProps {
   lead: {
@@ -90,6 +96,9 @@ export function QuotationBuilderModal({
   const [notes, setNotes] = useState<string>('');
   const [authorizedSignatureName, setAuthorizedSignatureName] = useState<string>('');
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [subsidyConfig, setSubsidyConfig] = useState<SubsidyFinancingConfig>(
+    DEFAULT_SUBSIDY_FINANCING_CONFIG,
+  );
 
   // Line items state
   const [items, setItems] = useState<CreateQuotationItemInput[]>([]);
@@ -265,6 +274,11 @@ export function QuotationBuilderModal({
     };
   }, [items, discountAmount, gstRate, ksebCharges, advancePercentage]);
 
+  // Real-time PM Surya Ghar Subsidy & Loan EMI Feasibility Result
+  const subsidyResult = useMemo(() => {
+    return calculateSubsidyAndFinancing(calc.total, Number(systemCapacityKw || 0), subsidyConfig);
+  }, [calc.total, systemCapacityKw, subsidyConfig]);
+
   // Handle Submit (Draft or Issue)
   const handleSubmit = async (targetStatus: 'draft' | 'issued' = 'draft') => {
     setErrorMsg(null);
@@ -275,6 +289,27 @@ export function QuotationBuilderModal({
     }
 
     try {
+      // Build subsidy summary note
+      let combinedNotes = (notes || '').trim();
+      if (subsidyConfig.enableSubsidy || subsidyConfig.enableLoan) {
+        const subsidyInfo = [
+          '--- [PM SURYA GHAR & SOLAR FINANCING FEASIBILITY] ---',
+          `• Central MNRE Subsidy: ₹${subsidyResult.centralSubsidy.toLocaleString('en-IN')}`,
+          subsidyResult.stateSubsidy > 0 ? `• State / DISCOM Subsidy: ₹${subsidyResult.stateSubsidy.toLocaleString('en-IN')}` : null,
+          `• Net Customer Investment: ₹${subsidyResult.netCustomerPayable.toLocaleString('en-IN')} (Gross: ₹${subsidyResult.grossAmount.toLocaleString('en-IN')})`,
+          `• Est. Generation: ~${subsidyResult.monthlyUnitsGenerated} units/mo (Monthly Savings: +₹${subsidyResult.monthlyElectricitySavings.toLocaleString('en-IN')}/mo)`,
+          subsidyConfig.enableLoan ? `• Green Loan EMI: ₹${subsidyResult.monthlyEmi.toLocaleString('en-IN')}/mo (${subsidyConfig.loanTenorYears}Y @ ${subsidyConfig.loanInterestRatePercent}% p.a.)` : null,
+          subsidyConfig.enableLoan ? `• Net Monthly Cashflow: ${subsidyResult.monthlyNetCashflow >= 0 ? '+' : ''}₹${subsidyResult.monthlyNetCashflow.toLocaleString('en-IN')}/mo` : null,
+          `• Simple Payback Period: ${subsidyResult.simplePaybackYears} Years`,
+        ]
+          .filter(Boolean)
+          .join('\n');
+
+        if (!combinedNotes.includes('PM SURYA GHAR & SOLAR FINANCING FEASIBILITY')) {
+          combinedNotes = combinedNotes ? `${combinedNotes}\n\n${subsidyInfo}` : subsidyInfo;
+        }
+      }
+
       const payload: any = {
         lead_id: lead.id,
         title: title || `Solar Rooftop ${systemCapacityKw}kW System`,
@@ -289,7 +324,7 @@ export function QuotationBuilderModal({
         payment_terms: paymentTerms,
         warranty_terms: warrantyTerms,
         exclusions,
-        notes,
+        notes: combinedNotes,
         authorized_signature_name: authorizedSignatureName,
         items: items.map((it, idx) => ({
           component_name: it.component_name,
@@ -589,6 +624,13 @@ export function QuotationBuilderModal({
               </div>
             </div>
           </div>
+
+          {/* 3. Government Subsidy & Clean Energy Loan Feasibility Card */}
+          <SubsidyFinancingCard
+            result={subsidyResult}
+            config={subsidyConfig}
+            onChangeConfig={(updates) => setSubsidyConfig((prev) => ({ ...prev, ...updates }))}
+          />
 
           {/* Bottom Grid: Warranties, Terms & Totals Calculator */}
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">

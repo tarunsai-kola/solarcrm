@@ -20,6 +20,26 @@ let testProfiles: any[] = [
     is_active: true,
   },
   {
+    id: USER_SALES_ID,
+    organization_id: ORG_ID,
+    company_id: ORG_ID,
+    email: 'priya.sales@sunbeam.example',
+    full_name: 'Priya Sharma',
+    role: 'inbound_sales',
+    account_status: 'active',
+    is_active: true,
+  },
+  {
+    id: USER_AGENT_ID,
+    organization_id: ORG_ID,
+    company_id: ORG_ID,
+    email: 'sunil.agent@sunbeam.example',
+    full_name: 'Sunil Shinde',
+    role: 'field_agent',
+    account_status: 'active',
+    is_active: true,
+  },
+  {
     id: USER_OTHER_AGENT_ID,
     organization_id: ORG_ID,
     company_id: ORG_ID,
@@ -258,6 +278,27 @@ vi.mock('../src/lib/supabase.js', () => {
           then: (onFulfilled: any) => Promise.resolve({ data: res, error: null }).then(onFulfilled),
         };
       },
+      upsert: (payload: any) => {
+        const items = Array.isArray(payload) ? payload : [payload];
+        for (const item of items) {
+          const arr = getTableData(table);
+          const existingIdx = arr.findIndex((x) => x.id === item.id);
+          if (existingIdx !== -1) {
+            arr[existingIdx] = { ...arr[existingIdx], ...item };
+          } else {
+            arr.push(item);
+          }
+        }
+        const res = !Array.isArray(payload) ? items[0] : items;
+        return {
+          select: () => ({
+            single: () => Promise.resolve({ data: res, error: null }),
+            maybeSingle: () => Promise.resolve({ data: res, error: null }),
+            then: (onFulfilled: any) => Promise.resolve({ data: res, error: null }).then(onFulfilled),
+          }),
+          then: (onFulfilled: any) => Promise.resolve({ data: res, error: null }).then(onFulfilled),
+        };
+      },
       update: (updates: any) => {
         const createStep = () => ({
           eq: (col: string, val: any) => {
@@ -413,59 +454,66 @@ vi.mock('../src/lib/supabase.js', () => {
     return builder;
   };
 
-  return {
-    supabaseAdmin: {
-      from: mockFrom,
-      rpc: (funcName: string, args: any) => {
-        if (funcName === 'log_audit_event') {
-          testAuditLogs.push(args);
-          return Promise.resolve({ data: null, error: null });
-        }
+  const mockAdmin = {
+    from: mockFrom,
+    rpc: (funcName: string, args: any) => {
+      if (funcName === 'log_audit_event') {
+        testAuditLogs.push(args);
         return Promise.resolve({ data: null, error: null });
+      }
+      return Promise.resolve({ data: null, error: null });
+    },
+    auth: {
+      getUser: (token: string) => {
+        if (token === 'admin-token') {
+          return Promise.resolve({ data: { user: { id: USER_ADMIN_ID, email: 'admin@sunbeam.example' } }, error: null });
+        }
+        if (token === 'sales-token') {
+          return Promise.resolve({ data: { user: { id: USER_SALES_ID, email: 'priya.sales@sunbeam.example' } }, error: null });
+        }
+        if (token === 'agent-token') {
+          return Promise.resolve({ data: { user: { id: USER_AGENT_ID, email: 'sunil.agent@sunbeam.example' } }, error: null });
+        }
+        if (token === 'other-agent-token') {
+          return Promise.resolve({ data: { user: { id: USER_OTHER_AGENT_ID, email: 'other.agent@sunbeam.example' } }, error: null });
+        }
+        return Promise.resolve({ data: { user: null }, error: new Error('Invalid token') });
       },
-      auth: {
-        getUser: (token: string) => {
-          if (token === 'admin-token') {
-            return Promise.resolve({ data: { user: { id: USER_ADMIN_ID, email: 'admin@sunbeam.example' } }, error: null });
-          }
-          if (token === 'sales-token') {
-            return Promise.resolve({ data: { user: { id: USER_SALES_ID, email: 'priya.sales@sunbeam.example' } }, error: null });
-          }
-          if (token === 'agent-token') {
-            return Promise.resolve({ data: { user: { id: USER_AGENT_ID, email: 'sunil.agent@sunbeam.example' } }, error: null });
-          }
-          if (token === 'other-agent-token') {
-            return Promise.resolve({ data: { user: { id: USER_OTHER_AGENT_ID, email: 'other.agent@sunbeam.example' } }, error: null });
-          }
-          return Promise.resolve({ data: { user: null }, error: new Error('Invalid token') });
-        },
-        admin: {
-          createUser: (userData: any) => {
-            const userId = userData.email.includes('sales') ? USER_SALES_ID : USER_AGENT_ID;
-            return Promise.resolve({
-              data: {
-                user: {
-                  id: userId,
-                  email: userData.email,
-                  user_metadata: userData.user_metadata,
-                },
+      admin: {
+        createUser: (userData: any) => {
+          const userId = userData.email.includes('sales') ? USER_SALES_ID : USER_AGENT_ID;
+          return Promise.resolve({
+            data: {
+              user: {
+                id: userId,
+                email: userData.email,
+                user_metadata: userData.user_metadata,
               },
-              error: null,
-            });
-          },
-          generateLink: () => {
-            return Promise.resolve({
-              data: {
-                properties: {
-                  action_link: 'https://crm.sunbeam.example/auth/confirm?token=xyz',
-                },
-              },
-              error: null,
-            });
-          },
-          deleteUser: () => Promise.resolve({ data: null, error: null }),
+            },
+            error: null,
+          });
         },
+        generateLink: () => {
+          return Promise.resolve({
+            data: {
+              properties: {
+                action_link: 'https://crm.sunbeam.example/auth/confirm?token=xyz',
+              },
+            },
+            error: null,
+          });
+        },
+        deleteUser: () => Promise.resolve({ data: null, error: null }),
       },
+    },
+  };
+
+  return {
+    supabaseAdmin: mockAdmin,
+    getScopedClient: vi.fn(() => mockAdmin),
+    authStorage: {
+      getStore: vi.fn(() => ({ client: mockAdmin, token: 'mock-token' })),
+      run: vi.fn((_store: unknown, fn: () => unknown) => fn()),
     },
   };
 });

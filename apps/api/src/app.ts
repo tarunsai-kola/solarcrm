@@ -20,6 +20,7 @@ import { integrationsRouter } from './routes/integrations.js';
 import { leadsRouter } from './routes/leads.js';
 import { notificationsRouter } from './routes/notifications.js';
 import { quotationsRouter } from './routes/quotations.js';
+import { publicProposalRouter } from './routes/public-proposals.js';
 import { settingsRouter } from './routes/settings.js';
 import { usersRouter } from './routes/users.js';
 
@@ -161,6 +162,7 @@ export function createApp() {
   app.use(`${base}/crm-config`, crmConfigRouter);
   app.use(`${base}/leads`, leadsRouter);
   app.use(`${base}/quotations`, quotationsRouter);
+  app.use(`${base}/public/proposals`, publicProposalRouter);
   app.use(`${base}/notifications`, notificationsRouter);
   app.use(`${base}/follow-ups`, followUpsRouter);
   app.use(`${base}/integrations`, integrationsRouter);

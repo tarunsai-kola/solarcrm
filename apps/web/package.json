@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "description": "Solar CRM Web Application",
+  "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
